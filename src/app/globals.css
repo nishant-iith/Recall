@@ -3,6 +3,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer base {
+  html, body {
+    overscroll-behavior-y: none; /* Disables Pull-to-Refresh */
+    touch-action: none; /* Disables standard browser gestures */
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

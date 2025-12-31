@@ -2,15 +2,20 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
+const defaultGenAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
-export async function explainConcept(question: string, answer: string) {
+export async function explainConcept(question: string, answer: string, userApiKey?: string) {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            return { error: "AI configuration missing (GEMINI_API_KEY)." }
-        }
+        let model;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+        if (userApiKey) {
+            const tempAI = new GoogleGenerativeAI(userApiKey)
+            model = tempAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+        } else if (process.env.GEMINI_API_KEY) {
+            model = defaultGenAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+        } else {
+            return { error: "AI configuration missing. Please add your Gemini API Key in Settings." }
+        }
 
         const prompt = `
         You are an expert tutor. Create a "Deep Dive" explanation for this flashcard.
@@ -34,6 +39,6 @@ export async function explainConcept(question: string, answer: string) {
 
     } catch (error) {
         console.error("AI Error:", error)
-        return { error: "Failed to generate explanation. Try again later." }
+        return { error: "Failed to generate explanation. Check your API Key or try again later." }
     }
 }

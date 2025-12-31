@@ -124,11 +124,13 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
                     const q = cards[currentIndex]?.question || "Unknown"
                     const a = cards[currentIndex]?.answer || "Unknown"
 
-                    const result = await explainConcept(q, a)
+                    const userApiKey = localStorage.getItem("recall_gemini_key") || undefined
+                    const result = await explainConcept(q, a, userApiKey)
+
                     if (result.text) {
                         setDeepDiveContent(result.text)
                     } else {
-                        setDeepDiveContent("Failed to generate explanation. Please check your API key.")
+                        setDeepDiveContent(result.error || "Failed to generate explanation. Please check your API key.")
                     }
                 } catch (e) {
                     console.error(e)
@@ -200,13 +202,13 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
 
     // PWA Install Prompt Check
     React.useEffect(() => {
-        const prompt = (window as any).deferredPrompt
+        const prompt = window.deferredPrompt
         if (!prompt && !localStorage.getItem("install_prompt_shown")) {
             toast("Install App for offline access!", {
                 action: {
                     label: "Install",
                     onClick: () => {
-                        if ((window as any).deferredPrompt) (window as any).deferredPrompt.prompt()
+                        if (window.deferredPrompt) window.deferredPrompt.prompt()
                         else alert("Use your browser menu to 'Add to Home Screen'")
                     }
                 },
@@ -234,11 +236,19 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
             <AnimatePresence>
                 {showDeepDive && (
                     <motion.div
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={{ right: 0.2 }}
+                        onDragEnd={(e, info) => {
+                            if (info.offset.x > 100) {
+                                setShowDeepDive(false)
+                            }
+                        }}
                         initial={{ x: "100%" }}
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="absolute inset-0 z-50 bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col"
+                        className="absolute inset-0 z-50 bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col cursor-grab active:cursor-grabbing"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 border-b border-zinc-900 bg-zinc-950/50 backdrop-blur z-10">
