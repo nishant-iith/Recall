@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import ActivityCalendar from "react-activity-calendar"
+import { ActivityCalendar } from "react-activity-calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 // Mock data for now

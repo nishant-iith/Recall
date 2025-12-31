@@ -5,9 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-mo
 import { Card as CardType } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
 import { Rating } from "@/components/rating"
-import { Play, RotateCcw } from "lucide-react"
 
 interface FlashcardStackProps {
     initialCards: CardType[]
@@ -27,7 +25,7 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
 
     const currentCard = cards[currentIndex]
 
-    const handleDragEnd = (event: any, info: any) => {
+    const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: { offset: { x: number } }) => {
         if (info.offset.x < -100) {
             // Swiped Left (Next)
             handleNext()
