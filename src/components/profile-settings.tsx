@@ -11,7 +11,8 @@ import { HeatmapStats } from "@/components/heatmap-stats"
 import { User, Plus, LogOut } from "lucide-react"
 import { signInWithGoogle, signOut } from "@/app/actions/auth"
 import { createCard } from "@/app/actions/cards"
-import { toast } from "sonner" // Assuming we have sonner or similar, else simple alert
+// toast is imported but not used directly here anymore using alerts for simple feedback or passed props.
+// import { toast } from "sonner"
 
 interface ProfileSettingsProps {
     user?: { email?: string; user_metadata?: { full_name?: string; avatar_url?: string } } | null
@@ -139,9 +140,9 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                                 variant="outline"
                                 className="w-full"
                                 onClick={() => {
-                                    // @ts-ignore
+                                    // @ts-expect-error
                                     if (window.deferredPrompt) {
-                                        // @ts-ignore
+                                        // @ts-expect-error
                                         window.deferredPrompt.prompt()
                                     } else {
                                         alert("To install, select 'Add to Home Screen' from your browser menu.")

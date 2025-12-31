@@ -1,8 +1,10 @@
 
-
-import { FlashcardStack } from "@/components/flashcard-stack"
+import { FlashcardReel } from "@/components/flashcard-reel"
 import { ProfileSettings } from "@/components/profile-settings"
 import { Card as CardType } from "@/lib/types"
+
+import { getUser } from "@/app/actions/auth"
+import { submitReview } from "@/app/actions/cards"
 
 // Puzzle data from GFG Logical Puzzles
 const MOCK_CARDS: CardType[] = [
@@ -95,11 +97,36 @@ const MOCK_CARDS: CardType[] = [
         answer: "No. Opposite corners are same color. Dominoes always cover one of each color. Remaining: 32 of one color, 30 of other. Impossible.",
         type: "flashcard",
         created_at: new Date().toISOString()
+    },
+    // Adding new cards for DSA, CS Fundamentals, and System Design
+    {
+        id: "11",
+        user_id: "u1",
+        hierarchy_id: "dsa",
+        question: "What is the time complexity of QuickSort in the worst case, and when does it happen?",
+        answer: "O(n²). This happens when the pivot is always the smallest or largest element (e.g., already sorted array) and the partition is unbalanced.",
+        type: "flashcard",
+        created_at: new Date().toISOString()
+    },
+    {
+        id: "12",
+        user_id: "u1",
+        hierarchy_id: "cs-fundamentals",
+        question: "What is the main difference between IPv4 and IPv6?",
+        answer: "IPv4 uses 32-bit addresses (4.3 billion addresses), while IPv6 uses 128-bit addresses (undecillions), solving the address exhaustion problem. IPv6 also has simpler headers.",
+        type: "flashcard",
+        created_at: new Date().toISOString()
+    },
+    {
+        id: "13",
+        user_id: "u1",
+        hierarchy_id: "system-design",
+        question: "Explain the DRY, KISS, and YAGNI principles.",
+        answer: "DRY: Don't Repeat Yourself (avoid duplication). KISS: Keep It Simple, Stupid (simpler is better). YAGNI: You Aren't Gonna Need It (don't build for hypothetical future).",
+        type: "flashcard",
+        created_at: new Date().toISOString()
     }
 ]
-
-import { getUser } from "@/app/actions/auth"
-import { submitReview } from "@/app/actions/cards"
 
 export default async function Home() {
     const user = await getUser()
@@ -115,7 +142,7 @@ export default async function Home() {
 
     return (
         <main className="min-h-screen bg-black text-white relative">
-            <FlashcardStack
+            <FlashcardReel
                 initialCards={shuffledCards}
                 onReview={handleReview}
             />
