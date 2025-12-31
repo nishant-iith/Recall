@@ -126,5 +126,43 @@ export async function submitReview(cardId: string, rating: number) {
             })
     }
 
+    // 3. Update Streak
+    const today = new Date().toISOString().split("T")[0]
+
+    // Get current streak
+    const { data: streakData } = await supabase
+        .from("user_streaks")
+        .select("*")
+        .eq("user_id", user.id)
+        .single()
+
+    if (streakData) {
+        const lastStudyDate = streakData.last_study_date
+
+        if (lastStudyDate !== today) {
+            const yesterday = new Date()
+            yesterday.setDate(yesterday.getDate() - 1)
+            const yesterdayStr = yesterday.toISOString().split("T")[0]
+
+            let newStreak = 1
+            if (lastStudyDate === yesterdayStr) {
+                newStreak = (streakData.current_streak || 0) + 1
+            }
+
+            await supabase.from("user_streaks").update({
+                current_streak: newStreak,
+                last_study_date: today,
+                updated_at: new Date().toISOString()
+            }).eq("user_id", user.id)
+        }
+    } else {
+        // First time ever
+        await supabase.from("user_streaks").insert({
+            user_id: user.id,
+            current_streak: 1,
+            last_study_date: today
+        })
+    }
+
     revalidatePath("/")
 }

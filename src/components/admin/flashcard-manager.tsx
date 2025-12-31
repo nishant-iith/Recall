@@ -8,15 +8,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { Pencil, Trash2, X, Save } from "lucide-react"
+import { Card } from "@/lib/types"
 
 interface FlashcardManagerProps {
-    initialCards: any[]
+    initialCards: (Card & { hierarchy?: { name: string } })[]
 }
 
 export function FlashcardManager({ initialCards }: FlashcardManagerProps) {
     const router = useRouter()
     const [editingId, setEditingId] = React.useState<string | null>(null)
-    const [editForm, setEditForm] = React.useState<any>({})
+    const [editForm, setEditForm] = React.useState<Partial<Card>>({})
     const [isLoading, setIsLoading] = React.useState(false)
 
     async function handleDelete(id: string) {
@@ -33,7 +34,7 @@ export function FlashcardManager({ initialCards }: FlashcardManagerProps) {
         }
     }
 
-    function startEdit(card: any) {
+    function startEdit(card: Card) {
         setEditingId(card.id)
         setEditForm({
             question: card.question,
@@ -66,14 +67,14 @@ export function FlashcardManager({ initialCards }: FlashcardManagerProps) {
                             <div className="space-y-1">
                                 <label className="text-xs text-zinc-500">Question</label>
                                 <Textarea
-                                    value={editForm.question}
+                                    value={editForm.question || ""}
                                     onChange={e => setEditForm({ ...editForm, question: e.target.value })}
                                 />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-zinc-500">Answer</label>
                                 <Textarea
-                                    value={editForm.answer}
+                                    value={editForm.answer || ""}
                                     onChange={e => setEditForm({ ...editForm, answer: e.target.value })}
                                 />
                             </div>

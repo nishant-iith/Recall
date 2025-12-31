@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { HeatmapStats } from "@/components/heatmap-stats"
-import { User, Plus, LogOut, Settings2, Download } from "lucide-react"
+import { Plus, LogOut, Settings2, Download } from "lucide-react"
 import { signInWithGoogle, signOut } from "@/app/actions/auth"
 import { createCard } from "@/app/actions/cards"
 

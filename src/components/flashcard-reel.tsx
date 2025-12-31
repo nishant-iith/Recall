@@ -3,12 +3,12 @@
 import * as React from "react"
 import { motion, AnimatePresence, PanInfo } from "framer-motion"
 import { Card as CardType } from "@/lib/types"
-import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Sparkles, Share2, Volume2, ThumbsUp, ThumbsDown } from "lucide-react"
+import { Sparkles, Share2, Volume2, ThumbsUp, ThumbsDown, X } from "lucide-react"
+import ReactMarkdown from "react-markdown"
 
 interface FlashcardReelProps {
     initialCards: CardType[]
@@ -19,13 +19,22 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
     const [currentIndex, setCurrentIndex] = React.useState(0)
     const [cards, setCards] = React.useState(initialCards)
     const [isFlipped, setIsFlipped] = React.useState(false)
-    const containerRef = React.useRef<HTMLDivElement>(null)
     const [direction, setDirection] = React.useState(0) // 1 = Next (Up), -1 = Prev (Down)
     const scrollLockRef = React.useRef(false)
+
+    // Deep Dive State
+    const [showDeepDive, setShowDeepDive] = React.useState(false)
+    const [deepDiveContent, setDeepDiveContent] = React.useState("")
+    const [isLoadingDeepDive, setIsLoadingDeepDive] = React.useState(false)
 
     // Keyboard Navigation
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (showDeepDive) {
+                if (e.key === "Escape") setShowDeepDive(false)
+                return
+            }
+
             if (e.key === "ArrowDown" || e.key === "j") {
                 if (currentIndex < cards.length - 1) {
                     setDirection(1)
@@ -41,11 +50,13 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
             } else if (e.key === " " || e.key === "Enter") {
                 e.preventDefault()
                 setIsFlipped(prev => !prev)
+            } else if (e.key === "ArrowLeft") {
+                setShowDeepDive(true)
             }
         }
         window.addEventListener("keydown", handleKeyDown)
         return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [currentIndex, cards.length])
+    }, [currentIndex, cards.length, showDeepDive])
 
     const variants = {
         enter: (direction: number) => ({
@@ -71,7 +82,7 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
 
     // Mouse Wheel / Trackpad Scroll handler
     const handleWheel = (e: React.WheelEvent) => {
-        if (scrollLockRef.current) return
+        if (scrollLockRef.current || showDeepDive) return
 
         const threshold = 20 // Sensitivity
         if (e.deltaY > threshold) {
@@ -98,36 +109,73 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
         scrollLockRef.current = true
         setTimeout(() => {
             scrollLockRef.current = false
-        }, 800) // Debounce time (adjust for feel)
+        }, 800)
     }
+
+    // Fetch Deep Dive Content
+    React.useEffect(() => {
+        const fetchContent = async () => {
+            if (showDeepDive && !deepDiveContent && !isLoadingDeepDive) {
+                setIsLoadingDeepDive(true)
+                try {
+                    // Dynamically import to keep client bundle clean
+                    const { explainConcept } = await import("@/app/actions/ai")
+                    // Use a mock call if cards are missing, but locally we assume cards exist
+                    const q = cards[currentIndex]?.question || "Unknown"
+                    const a = cards[currentIndex]?.answer || "Unknown"
+
+                    const result = await explainConcept(q, a)
+                    if (result.text) {
+                        setDeepDiveContent(result.text)
+                    } else {
+                        setDeepDiveContent("Failed to generate explanation. Please check your API key.")
+                    }
+                } catch (e) {
+                    console.error(e)
+                    setDeepDiveContent("Error connecting to AI. Please try again.")
+                } finally {
+                    setIsLoadingDeepDive(false)
+                }
+            }
+        }
+        fetchContent()
+    }, [showDeepDive, deepDiveContent, currentIndex, cards, isLoadingDeepDive])
+
+    // Reset when changing cards
+    React.useEffect(() => {
+        setShowDeepDive(false)
+        setDeepDiveContent("")
+    }, [currentIndex])
+
 
     const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         const threshold = 50
         const velocityThreshold = 20
 
         // Vertical Swipe (Next/Prev)
-        if (info.offset.y < -threshold && info.velocity.y < -velocityThreshold) {
-            // Swipe Up -> Next
-            if (currentIndex < cards.length - 1) {
-                setDirection(1)
-                handleNext()
-            } else {
-                toast("You've reached the end for now!")
+        if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
+            if (info.offset.y < -threshold && info.velocity.y < -velocityThreshold) {
+                // Swipe Up -> Next
+                if (currentIndex < cards.length - 1) {
+                    setDirection(1)
+                    handleNext()
+                } else {
+                    toast("You've reached the end for now!")
+                }
+            } else if (info.offset.y > threshold && info.velocity.y > velocityThreshold) {
+                // Swipe Down -> Prev
+                if (currentIndex > 0) {
+                    setDirection(-1)
+                    handlePrev()
+                }
             }
-        } else if (info.offset.y > threshold && info.velocity.y > velocityThreshold) {
-            // Swipe Down -> Prev
-            if (currentIndex > 0) {
-                setDirection(-1)
-                handlePrev()
+        } else {
+            // Horizontal Swipe
+            // Detect swipe left
+            if (info.offset.x < -50) {
+                // Swipe Left -> Deep Dive
+                setShowDeepDive(true)
             }
-        }
-
-        // Horizontal Swipe (AI Deep Dive)
-        if (info.offset.x < -50) {
-            // Swipe Left
-            toast.info("AI Deep Dive coming soon!", {
-                icon: <Sparkles className="h-4 w-4 text-purple-400" />
-            })
         }
     }
 
@@ -152,15 +200,13 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
 
     // PWA Install Prompt Check
     React.useEffect(() => {
-        // @ts-expect-error: deferredPrompt is non-standard
-        const prompt = window.deferredPrompt
+        const prompt = (window as any).deferredPrompt
         if (!prompt && !localStorage.getItem("install_prompt_shown")) {
             toast("Install App for offline access!", {
                 action: {
                     label: "Install",
                     onClick: () => {
-                        // @ts-expect-error: deferredPrompt is non-standard
-                        if (window.deferredPrompt) window.deferredPrompt.prompt()
+                        if ((window as any).deferredPrompt) (window as any).deferredPrompt.prompt()
                         else alert("Use your browser menu to 'Add to Home Screen'")
                     }
                 },
@@ -183,6 +229,70 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
                     </span>
                 </div>
             </div>
+
+            {/* AI Deep Dive Panel */}
+            <AnimatePresence>
+                {showDeepDive && (
+                    <motion.div
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="absolute inset-0 z-50 bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col"
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-zinc-900 bg-zinc-950/50 backdrop-blur z-10">
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="h-5 w-5 text-purple-400" />
+                                <span className="font-bold text-white">AI Deep Dive</span>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => setShowDeepDive(false)}>
+                                <span className="sr-only">Close</span>
+                                <X className="h-6 w-6 text-zinc-400" />
+                            </Button>
+                        </div>
+
+                        {/* Content */}
+                        <ScrollArea className="flex-1 p-6">
+                            {isLoadingDeepDive || !deepDiveContent ? (
+                                <div className="space-y-4 animate-pulse max-w-2xl mx-auto mt-8">
+                                    <div className="flex gap-4 items-center mb-8">
+                                        <div className="h-12 w-12 rounded-full bg-zinc-800"></div>
+                                        <div className="space-y-2">
+                                            <div className="h-4 w-32 bg-zinc-800 rounded"></div>
+                                            <div className="h-3 w-24 bg-zinc-800 rounded"></div>
+                                        </div>
+                                    </div>
+                                    <div className="h-4 bg-zinc-800 rounded w-full"></div>
+                                    <div className="h-4 bg-zinc-800 rounded w-5/6"></div>
+                                    <div className="h-4 bg-zinc-800 rounded w-4/6"></div>
+                                    <div className="h-32 bg-zinc-800 rounded w-full mt-8"></div>
+                                </div>
+                            ) : (
+                                <div className="prose prose-invert prose-zinc max-w-2xl mx-auto pb-20 pt-4">
+                                    <ReactMarkdown
+                                        components={{
+                                            code({ node, className, children, ...props }) {
+                                                return <code className={cn("bg-zinc-800 px-1 py-0.5 rounded text-sm text-green-300 font-mono", className)} {...props}>{children}</code>
+                                            },
+                                            pre({ children }) {
+                                                return <pre className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>
+                                            },
+                                            h1({ children }) { return <h1 className="text-2xl font-bold text-white mb-4">{children}</h1> },
+                                            h2({ children }) { return <h2 className="text-xl font-bold text-white mt-8 mb-4 border-b border-zinc-800 pb-2">{children}</h2> },
+                                            p({ children }) { return <p className="text-zinc-300 leading-relaxed mb-4">{children}</p> },
+                                            ul({ children }) { return <ul className="list-disc list-outside ml-4 mb-4 text-zinc-300 space-y-1">{children}</ul> },
+                                            ol({ children }) { return <ol className="list-decimal list-outside ml-4 mb-4 text-zinc-300 space-y-1">{children}</ol> },
+                                        }}
+                                    >
+                                        {deepDiveContent}
+                                    </ReactMarkdown>
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* The Reel - AnimatePresence for transitions */}
             <div className="flex-1 relative flex items-center justify-center">
@@ -248,9 +358,9 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
                                 </Button>
                                 <Button
                                     size="icon" variant="ghost" className="rounded-full bg-zinc-800/50 backdrop-blur pointer-events-auto hover:bg-zinc-700"
-                                    onClick={(e) => { e.stopPropagation(); toast.success("Link copied!") }}
+                                    onClick={(e) => { e.stopPropagation(); setShowDeepDive(true) }} // Changed Share to Trigger Deep Dive explicitly on click too
                                 >
-                                    <Share2 className="h-5 w-5" />
+                                    <Sparkles className="h-5 w-5 text-purple-400" />
                                 </Button>
                             </div>
                         </div>
