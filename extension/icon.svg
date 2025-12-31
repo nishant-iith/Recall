@@ -1,0 +1,10 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background: Zinc-950/Black with rounded corners -->
+  <rect width="128" height="128" rx="28" fill="#09090b"/>
+  
+  <!-- Brain Outline: White, thick stroke -->
+  <path d="M96 64C96 52.9543 87.0457 44 76 44C73.9317 44 71.9566 44.3129 70.1068 44.8916C67.6307 36.3155 59.7397 30 50.5 30C39.1782 30 30 39.1782 30 50.5C30 51.6521 30.0951 52.7786 30.2783 53.8742C24.1614 56.4022 20 62.4343 20 69.5C20 78.6127 27.3873 86 36.5 86C37.0706 86 37.6322 85.971 38.1822 85.914C40.6756 93.3615 47.7291 98.6667 56 98.6667C62.0673 98.6667 67.5029 95.8974 71.1246 91.5304C74.0041 93.6826 77.5678 95 81.5 95C90.6127 95 98 87.6127 98 78.5C98 76.9926 97.7788 75.5323 97.3612 74.1444C102.327 71.6033 106 66.2483 106 60C106 53.1813 101.876 47.2754 96 44" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Lightning Bolt: Purple, sharp -->
+  <path d="M68 34L54 64H74L60 94" stroke="#8b5cf6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

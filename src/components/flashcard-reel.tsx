@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { motion, AnimatePresence, PanInfo, useAnimation } from "framer-motion"
+import { motion, AnimatePresence, PanInfo } from "framer-motion"
 import { Card as CardType } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -16,18 +16,90 @@ interface FlashcardReelProps {
 }
 
 export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
-    // We'll use a virtual index to track which card is active
     const [currentIndex, setCurrentIndex] = React.useState(0)
     const [cards, setCards] = React.useState(initialCards)
     const [isFlipped, setIsFlipped] = React.useState(false)
     const containerRef = React.useRef<HTMLDivElement>(null)
+    const [direction, setDirection] = React.useState(0) // 1 = Next (Up), -1 = Prev (Down)
+    const scrollLockRef = React.useRef(false)
 
-    // Handle vertical snap scrolling
-    // For a true "Reel" feel, we might want to use native CSS scroll snap 
-    // but framer-motion gives us more control over swipe gestures (like left swipe).
-    // Let's try a hybrid: 
-    // 1. One active card taking up the full viewport.
-    // 2. Drag Y to switch.
+    // Keyboard Navigation
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "ArrowDown" || e.key === "j") {
+                if (currentIndex < cards.length - 1) {
+                    setDirection(1)
+                    handleNext()
+                } else {
+                    toast("You've reached the end!")
+                }
+            } else if (e.key === "ArrowUp" || e.key === "k") {
+                if (currentIndex > 0) {
+                    setDirection(-1)
+                    handlePrev()
+                }
+            } else if (e.key === " " || e.key === "Enter") {
+                e.preventDefault()
+                setIsFlipped(prev => !prev)
+            }
+        }
+        window.addEventListener("keydown", handleKeyDown)
+        return () => window.removeEventListener("keydown", handleKeyDown)
+    }, [currentIndex, cards.length])
+
+    const variants = {
+        enter: (direction: number) => ({
+            y: direction > 0 ? 1000 : -1000,
+            opacity: 0,
+            scale: 0.9
+        }),
+        center: {
+            zIndex: 1,
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            transition: { type: "spring" as const, stiffness: 300, damping: 30 }
+        },
+        exit: (direction: number) => ({
+            zIndex: 0,
+            y: direction < 0 ? 1000 : -1000,
+            opacity: 0,
+            scale: 0.9,
+            transition: { type: "spring" as const, stiffness: 300, damping: 30 }
+        })
+    }
+
+    // Mouse Wheel / Trackpad Scroll handler
+    const handleWheel = (e: React.WheelEvent) => {
+        if (scrollLockRef.current) return
+
+        const threshold = 20 // Sensitivity
+        if (e.deltaY > threshold) {
+            // Scroll Down -> Next Card
+            if (currentIndex < cards.length - 1) {
+                setDirection(1)
+                handleNext()
+                lockScroll()
+            } else {
+                toast("You've reached the end!")
+                lockScroll()
+            }
+        } else if (e.deltaY < -threshold) {
+            // Scroll Up -> Prev Card
+            if (currentIndex > 0) {
+                setDirection(-1)
+                handlePrev()
+                lockScroll()
+            }
+        }
+    }
+
+    const lockScroll = () => {
+        scrollLockRef.current = true
+        setTimeout(() => {
+            scrollLockRef.current = false
+        }, 800) // Debounce time (adjust for feel)
+    }
 
     const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         const threshold = 50
@@ -37,14 +109,15 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
         if (info.offset.y < -threshold && info.velocity.y < -velocityThreshold) {
             // Swipe Up -> Next
             if (currentIndex < cards.length - 1) {
+                setDirection(1)
                 handleNext()
             } else {
-                // Bounce back or load more?
                 toast("You've reached the end for now!")
             }
         } else if (info.offset.y > threshold && info.velocity.y > velocityThreshold) {
             // Swipe Down -> Prev
             if (currentIndex > 0) {
+                setDirection(-1)
                 handlePrev()
             }
         }
@@ -73,21 +146,20 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
         toast.success(rating > 3 ? "Marked as Easy" : "Marked for Review", {
             duration: 1000
         })
+        setDirection(1)
         handleNext()
     }
 
     // PWA Install Prompt Check
     React.useEffect(() => {
-        // @ts-ignore
+        // @ts-expect-error: deferredPrompt is non-standard
         const prompt = window.deferredPrompt
         if (!prompt && !localStorage.getItem("install_prompt_shown")) {
-            // Logic to detect if not installed could be added here
-            // For now, simplistically show toast on mount
             toast("Install App for offline access!", {
                 action: {
                     label: "Install",
                     onClick: () => {
-                        // @ts-ignore
+                        // @ts-expect-error: deferredPrompt is non-standard
                         if (window.deferredPrompt) window.deferredPrompt.prompt()
                         else alert("Use your browser menu to 'Add to Home Screen'")
                     }
@@ -103,7 +175,7 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
     return (
         <div className="relative w-full h-[100dvh] bg-black overflow-hidden flex flex-col">
             {/* Top Bar (Overlay) */}
-            <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
+            <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
                 <span className="font-bold text-lg tracking-tighter text-white">Recall</span>
                 <div className="flex gap-4 text-white/80">
                     <span className="text-xs font-mono opacity-60">
@@ -114,18 +186,21 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
 
             {/* The Reel - AnimatePresence for transitions */}
             <div className="flex-1 relative flex items-center justify-center">
-                <AnimatePresence mode="popLayout" initial={false}>
+                <AnimatePresence initial={false} custom={direction} mode="popLayout">
                     <motion.div
                         key={currentIndex}
+                        custom={direction}
+                        variants={variants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
                         className="absolute inset-0 p-4 pb-20 pt-16 flex items-center justify-center"
-                        initial={{ y: 300, opacity: 0, scale: 0.9 }}
-                        animate={{ y: 0, opacity: 1, scale: 1 }}
-                        exit={{ y: -300, opacity: 0, scale: 0.9 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         drag="y"
                         dragConstraints={{ top: 0, bottom: 0 }}
                         dragElastic={0.2}
                         onDragEnd={handleDragEnd}
+                        onWheel={handleWheel}
+                        style={{ touchAction: "none" }} // FORCE single-finger handling
                     >
                         {/* Card Container */}
                         <div
@@ -134,8 +209,6 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
                         >
                             <ScrollArea className="h-full w-full">
                                 <div className="min-h-full flex flex-col items-center justify-center p-8 text-center">
-                                    {/* Video content would go here */}
-
                                     <div className="mb-6 flex gap-2 justify-center">
                                         <span className={cn(
                                             "text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded bg-zinc-800 text-zinc-400",
@@ -165,7 +238,7 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
                                 </div>
                             </ScrollArea>
 
-                            {/* Side Action Bar (Like TikTok) */}
+                            {/* Side Action Bar */}
                             <div className="absolute right-4 bottom-20 flex flex-col gap-6 items-center z-30 pointer-events-none">
                                 <Button
                                     size="icon" variant="ghost" className="rounded-full bg-zinc-800/50 backdrop-blur pointer-events-auto hover:bg-zinc-700"
@@ -196,7 +269,7 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
                         >
                             <ThumbsDown className="h-6 w-6" />
                         </Button>
-                        <div className="text-xs font-medium text-zinc-500 uppercase tracking-widest">Rate It</div>
+                        <div className="text-xs font-medium text-zinc-500 uppercase tracking-widest">Do you remember?</div>
                         <Button
                             className="rounded-full w-14 h-14 p-0 bg-green-600 hover:bg-green-500 shadow-lg shadow-green-900/20"
                             onClick={(e) => { e.stopPropagation(); handleRating(5) }}

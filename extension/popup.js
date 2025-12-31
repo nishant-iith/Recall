@@ -20,7 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Fetch Hierarchy
   try {
-    const res = await fetch(`${RECALL_URL}/api/hierarchy`);
+    const res = await fetch(`${RECALL_URL}/api/hierarchy`, {
+        credentials: 'include' // Important: Send cookies!
+    });
     if (res.status === 401) {
       authWarning.style.display = 'block';
       submitBtn.disabled = true;
@@ -36,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
   } catch (err) {
-    statusDiv.textContent = "Failed to connect to Recall.";
+    statusDiv.textContent = "Failed to connect to Recall. Is localhost:3000 running?";
     statusDiv.className = "status error";
   }
 
@@ -51,6 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch(`${RECALL_URL}/api/cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Important: Send cookies!
         body: JSON.stringify({
           question: questionInput.value,
           answer: answerInput.value,

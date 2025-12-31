@@ -21,8 +21,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.windows.create({
       url: "popup.html",
       type: "popup",
-      width: 360,
-      height: 400
+      width: 400,
+      height: 600
     });
     
     // Store selection to be picked up by popup (via storage)
