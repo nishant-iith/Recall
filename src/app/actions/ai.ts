@@ -2,14 +2,35 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const defaultGenAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
+const MODEL_NAMES = ["gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-1.5-pro", "gemini-pro"];
+
+async function getWorkingModel(apiKey: string) {
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // Try models in order
+    for (const modelName of MODEL_NAMES) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            // Quick test to see if model exists/is accessible
+            // We use a token count request which is cheaper/faster than generation usually, 
+            // but generateContent is definitive.
+            await model.generateContent("test");
+            return model;
+        } catch (error: any) {
+            // If 404, continue to next model. If 403 (Invalid Key), throw immediately.
+            if (error.toString().includes("404") || error.toString().includes("not found")) {
+                console.warn(`Model ${modelName} not found, trying next...`);
+                continue;
+            }
+            throw error; // Re-throw auth errors or rate limits
+        }
+    }
+    throw new Error("No compatible Gemini models found for this API key.");
+}
 
 export async function verifyApiKey(apiKey: string) {
     try {
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-        // Simple test generation
-        await model.generateContent("Test connection")
+        await getWorkingModel(apiKey);
         return { success: true }
     } catch (error: any) {
         console.error("Verification Error:", error)
@@ -23,15 +44,15 @@ export async function verifyApiKey(apiKey: string) {
 export async function explainConcept(question: string, answer: string, userApiKey?: string) {
     try {
         let model;
+        const keyToUse = userApiKey || process.env.GEMINI_API_KEY;
 
-        if (userApiKey) {
-            const tempAI = new GoogleGenerativeAI(userApiKey)
-            model = tempAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-        } else if (process.env.GEMINI_API_KEY) {
-            model = defaultGenAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-        } else {
+        if (!keyToUse) {
             return { error: "AI configuration missing. Please add your Gemini API Key in Settings." }
         }
+
+        // Just get the model directly. If it fails here, it falls to catch block.
+        // We re-use the same fallback logic for the actual call to ensure robustness.
+        model = await getWorkingModel(keyToUse);
 
         const prompt = `
         You are an expert tutor. Create a "Deep Dive" explanation for this flashcard.
@@ -57,7 +78,7 @@ export async function explainConcept(question: string, answer: string, userApiKe
         console.error("AI Error:", error)
         // Return more specific error info
         const msg = error.message || error.toString()
-        if (msg.includes("API_KEY_INVALID")) return { error: "Invalid API Key provided." }
+        if (msg.includes("API_KEY_INVALID") || msg.includes("403")) return { error: "Invalid API Key provided." }
         if (msg.includes("429")) return { error: "Rate limit exceeded. Try again later." }
         return { error: `AI Error: ${msg.substring(0, 100)}...` }
     }
