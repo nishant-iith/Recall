@@ -2,6 +2,7 @@
 
 import { FlashcardStack } from "@/components/flashcard-stack"
 import { CardEditor } from "@/components/card-editor"
+import { ProfileSettings } from "@/components/profile-settings"
 import { Card as CardType } from "@/lib/types"
 
 // Mock data for initial dev
@@ -39,6 +40,7 @@ export default function Home() {
                 onReview={handleReview}
             />
             <CardEditor />
+            <ProfileSettings />
         </main>
     )
 }
