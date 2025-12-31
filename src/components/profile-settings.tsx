@@ -16,25 +16,40 @@ interface ProfileSettingsProps {
     user?: { email?: string; user_metadata?: { full_name?: string; avatar_url?: string } } | null
 }
 
-declare global {
-    interface Window {
-        deferredPrompt: any;
-    }
-}
-
 export function ProfileSettings({ user }: ProfileSettingsProps) {
     const [showAddCard, setShowAddCard] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState(false)
     const [apiKey, setApiKey] = React.useState("")
+    const [isVerifying, setIsVerifying] = React.useState(false)
 
     React.useEffect(() => {
         const storedKey = localStorage.getItem("recall_gemini_key")
         if (storedKey) setApiKey(storedKey)
     }, [])
 
-    function saveApiKey() {
-        localStorage.setItem("recall_gemini_key", apiKey)
-        alert("API Key saved!")
+    async function verifyAndSave() {
+        if (!apiKey.trim()) {
+            alert("Please enter an API Key first.")
+            return
+        }
+
+        setIsVerifying(true)
+        try {
+            const { verifyApiKey } = await import("@/app/actions/ai")
+            const result = await verifyApiKey(apiKey)
+
+            if (result.success) {
+                localStorage.setItem("recall_gemini_key", apiKey)
+                alert("Success! Key Verified & Saved. Only you can see this key.")
+            } else {
+                alert(`Verification Failed: ${result.error}`)
+            }
+        } catch (e) {
+            console.error(e)
+            alert("Verification failed due to network error.")
+        } finally {
+            setIsVerifying(false)
+        }
     }
 
     async function onAddCard(formData: FormData) {
@@ -155,7 +170,14 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                                         placeholder="sk-..."
                                         className="bg-black/40 border-white/10 h-10 rounded-xl"
                                     />
-                                    <Button size="sm" onClick={saveApiKey} className="rounded-xl h-10 px-4 bg-white/10 hover:bg-white/20 text-white font-medium">Save</Button>
+                                    <Button
+                                        size="sm"
+                                        onClick={verifyAndSave}
+                                        disabled={isVerifying}
+                                        className={`rounded-xl h-10 px-4 bg-white/10 hover:bg-white/20 text-white font-medium ${isVerifying ? "opacity-50" : ""}`}
+                                    >
+                                        {isVerifying ? "Verifying..." : "Verify & Save"}
+                                    </Button>
                                 </div>
                                 <p className="text-[10px] text-zinc-500">
                                     Stored locally. Bring your own key for unlimited power.

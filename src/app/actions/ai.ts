@@ -4,6 +4,22 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 
 const defaultGenAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
+export async function verifyApiKey(apiKey: string) {
+    try {
+        const genAI = new GoogleGenerativeAI(apiKey)
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+        // Simple test generation
+        await model.generateContent("Test connection")
+        return { success: true }
+    } catch (error: any) {
+        console.error("Verification Error:", error)
+        return {
+            success: false,
+            error: error.message || "Invalid API Key or API not enabled."
+        }
+    }
+}
+
 export async function explainConcept(question: string, answer: string, userApiKey?: string) {
     try {
         let model;
@@ -37,8 +53,12 @@ export async function explainConcept(question: string, answer: string, userApiKe
 
         return { text }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("AI Error:", error)
-        return { error: "Failed to generate explanation. Check your API Key or try again later." }
+        // Return more specific error info
+        const msg = error.message || error.toString()
+        if (msg.includes("API_KEY_INVALID")) return { error: "Invalid API Key provided." }
+        if (msg.includes("429")) return { error: "Rate limit exceeded. Try again later." }
+        return { error: `AI Error: ${msg.substring(0, 100)}...` }
     }
 }
