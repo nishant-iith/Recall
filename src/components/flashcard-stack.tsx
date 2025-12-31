@@ -1,14 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion"
+import { motion, AnimatePresence, PanInfo } from "framer-motion"
 import { Card as CardType } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Rating } from "@/components/rating"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle2, RotateCcw } from "lucide-react"
+import { CheckCircle2, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface FlashcardStackProps {
     initialCards: CardType[]
@@ -21,28 +21,42 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
     const [isFlipped, setIsFlipped] = React.useState(false)
     const [rating, setRating] = React.useState(0)
     const [isFinished, setIsFinished] = React.useState(false)
-
-    // Drag state
-    const x = useMotionValue(0)
-    const rotate = useTransform(x, [-200, 200], [-10, 10])
-    const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5])
+    const [exitX, setExitX] = React.useState(0)
 
     const currentCard = cards[currentIndex]
     const progress = ((currentIndex + (isFinished ? 1 : 0)) / cards.length) * 100
 
-    const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: { offset: { x: number } }) => {
-        if (info.offset.x < -100) {
+    const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+        if (info.offset.x < -100 && info.velocity.x < -100) {
+            setExitX(-300)
             handleNext()
+        } else if (info.offset.x > 100 && info.velocity.x > 100) {
+            setExitX(300)
+            handlePrev()
         }
     }
 
     const handleNext = () => {
         if (currentIndex < cards.length - 1) {
-            setIsFlipped(false)
-            setRating(0)
-            setCurrentIndex(prev => prev + 1)
+            setExitX(-300)
+            setTimeout(() => {
+                setIsFlipped(false)
+                setRating(0)
+                setCurrentIndex(prev => prev + 1)
+            }, 50)
         } else {
             setIsFinished(true)
+        }
+    }
+
+    const handlePrev = () => {
+        if (currentIndex > 0) {
+            setExitX(300)
+            setTimeout(() => {
+                setIsFlipped(false)
+                setRating(0)
+                setCurrentIndex(prev => prev - 1)
+            }, 50)
         }
     }
 
@@ -99,27 +113,28 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
             </div>
 
             {/* Card Stack */}
-            <div className="flex-1 relative flex items-center justify-center p-4 pb-0">
-                <AnimatePresence mode="wait">
+            <div className="flex-1 relative flex items-center justify-center px-4">
+                <AnimatePresence mode="popLayout" initial={false}>
                     <motion.div
                         key={currentCard.id}
-                        style={{ x, rotate, opacity }}
                         drag="x"
                         dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.8}
                         onDragEnd={handleDragEnd}
-                        className="w-full h-full max-h-[70vh] absolute cursor-grab active:cursor-grabbing"
-                        initial={{ scale: 0.95, opacity: 0, x: 200 }}
+                        className="w-full h-full max-h-[65vh] cursor-grab active:cursor-grabbing"
+                        initial={{ scale: 0.9, opacity: 0, x: exitX > 0 ? -300 : 300 }}
                         animate={{ scale: 1, opacity: 1, x: 0 }}
-                        exit={{ scale: 0.95, opacity: 0, x: -200 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        exit={{ scale: 0.9, opacity: 0, x: exitX }}
+                        transition={{ type: "spring", stiffness: 400, damping: 35 }}
                     >
-                        <Card className="w-full h-full bg-zinc-900/80 backdrop-blur border-zinc-800 shadow-2xl rounded-2xl overflow-hidden flex flex-col">
+                        <Card className="w-full h-full bg-zinc-900/90 backdrop-blur border-zinc-800 shadow-2xl rounded-2xl overflow-hidden flex flex-col">
+                            {/* Card Content - Tappable Area */}
                             <div
-                                className="flex-1 relative"
+                                className="flex-1 relative cursor-pointer"
                                 onClick={() => setIsFlipped(!isFlipped)}
                             >
-                                <ScrollArea className="h-full w-full p-6">
-                                    <div className="min-h-[50vh] flex flex-col justify-center items-center text-center">
+                                <ScrollArea className="h-full w-full">
+                                    <div className="min-h-[40vh] flex flex-col justify-center items-center text-center p-6">
                                         {currentCard.type === 'video' && currentCard.video_url && (
                                             <div className="w-full aspect-video bg-black mb-4 rounded-xl overflow-hidden">
                                                 <video
@@ -134,13 +149,15 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
                                         )}
 
                                         <div className="space-y-4">
-                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${isFlipped
+                                            <span className={cn(
+                                                "inline-block px-3 py-1 rounded-full text-xs font-medium",
+                                                isFlipped
                                                     ? "bg-green-500/20 text-green-400"
                                                     : "bg-blue-500/20 text-blue-400"
-                                                }`}>
+                                            )}>
                                                 {isFlipped ? "ANSWER" : "QUESTION"}
                                             </span>
-                                            <div className="text-xl md:text-2xl font-semibold text-white leading-relaxed">
+                                            <div className="text-lg md:text-xl font-medium text-white leading-relaxed">
                                                 {isFlipped ? currentCard.answer : currentCard.question}
                                             </div>
                                         </div>
@@ -150,7 +167,7 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
                                 {/* Tap hint */}
                                 {!isFlipped && (
                                     <motion.div
-                                        className="absolute bottom-4 left-0 right-0 text-center text-zinc-600 text-xs"
+                                        className="absolute bottom-2 left-0 right-0 text-center text-zinc-600 text-xs"
                                         animate={{ opacity: [0.5, 1, 0.5] }}
                                         transition={{ repeat: Infinity, duration: 2 }}
                                     >
@@ -162,15 +179,38 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
                             {/* Footer Actions - Rating */}
                             {isFlipped && (
                                 <motion.div
-                                    className="p-6 bg-zinc-900/95 backdrop-blur border-t border-zinc-800"
+                                    className="p-4 bg-zinc-900/95 backdrop-blur border-t border-zinc-800"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                 >
                                     <div className="flex flex-col gap-3 items-center">
                                         <span className="text-sm text-zinc-400">How difficult was this?</span>
-                                        <Rating value={rating} onChange={handleRating} />
-                                        <div className="w-full flex justify-center items-center text-xs text-zinc-600 mt-2">
-                                            <span>👈 Swipe left for next</span>
+
+                                        {/* Rating Buttons */}
+                                        <div className="flex gap-2">
+                                            {[1, 2, 3, 4, 5].map((value) => (
+                                                <button
+                                                    key={value}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleRating(value)
+                                                    }}
+                                                    className={cn(
+                                                        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all",
+                                                        rating === value
+                                                            ? "bg-primary text-primary-foreground scale-110"
+                                                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                                                    )}
+                                                >
+                                                    {value}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex items-center gap-1 text-xs text-zinc-600">
+                                            <span>1 = Easy</span>
+                                            <span className="mx-2">•</span>
+                                            <span>5 = Hard</span>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -179,7 +219,29 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
                     </motion.div>
                 </AnimatePresence>
             </div>
+
+            {/* Navigation Buttons */}
+            <div className="p-4 flex items-center justify-between">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handlePrev}
+                    disabled={currentIndex === 0}
+                    className="h-12 w-12 rounded-full"
+                >
+                    <ChevronLeft className="h-6 w-6" />
+                </Button>
+
+                <Button
+                    onClick={handleNext}
+                    className="px-8 h-12 rounded-full bg-primary hover:bg-primary/90"
+                >
+                    {currentIndex === cards.length - 1 ? "Finish" : "Next"}
+                    <ChevronRight className="h-5 w-5 ml-1" />
+                </Button>
+            </div>
         </div>
     )
 }
+
 

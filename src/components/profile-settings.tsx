@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { HeatmapStats } from "@/components/heatmap-stats"
 import { User, Plus, LogOut } from "lucide-react"
 import { signInWithGoogle, signOut } from "@/app/actions/auth"
+import { createCard } from "@/app/actions/cards"
+import { toast } from "sonner" // Assuming we have sonner or similar, else simple alert
 
 interface ProfileSettingsProps {
     user?: { email?: string; user_metadata?: { full_name?: string; avatar_url?: string } } | null
@@ -17,18 +19,19 @@ interface ProfileSettingsProps {
 
 export function ProfileSettings({ user }: ProfileSettingsProps) {
     const [showAddCard, setShowAddCard] = React.useState(false)
-    const [question, setQuestion] = React.useState("")
-    const [answer, setAnswer] = React.useState("")
-    const [videoUrl, setVideoUrl] = React.useState("")
+    const [isLoading, setIsLoading] = React.useState(false)
 
-    const handleAddCard = (e: React.FormEvent) => {
-        e.preventDefault()
-        console.log({ question, answer, videoUrl })
-        // TODO: Save to Supabase
-        setQuestion("")
-        setAnswer("")
-        setVideoUrl("")
-        setShowAddCard(false)
+    async function onAddCard(formData: FormData) {
+        setIsLoading(true)
+        const result = await createCard(formData)
+        setIsLoading(false)
+
+        if (result?.error) {
+            alert(result.error) // Replace with toast later
+        } else {
+            alert("Card created successfully!")
+            setShowAddCard(false)
+        }
     }
 
     return (
@@ -85,14 +88,13 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                         </Button>
 
                         {showAddCard && (
-                            <form onSubmit={handleAddCard} className="space-y-4 p-4 rounded-lg border border-zinc-800 bg-zinc-900/50">
+                            <form action={onAddCard} className="space-y-4 p-4 rounded-lg border border-zinc-800 bg-zinc-900/50">
                                 <div className="space-y-2">
                                     <Label htmlFor="question">Question</Label>
                                     <Textarea
                                         id="question"
+                                        name="question"
                                         placeholder="Enter the question..."
-                                        value={question}
-                                        onChange={e => setQuestion(e.target.value)}
                                         required
                                         className="min-h-[80px]"
                                     />
@@ -101,23 +103,23 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                                     <Label htmlFor="answer">Answer</Label>
                                     <Textarea
                                         id="answer"
+                                        name="answer"
                                         placeholder="Enter the answer..."
-                                        value={answer}
-                                        onChange={e => setAnswer(e.target.value)}
                                         required
                                         className="min-h-[80px]"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="video">Video URL (Optional)</Label>
+                                    <Label htmlFor="videoUrl">Video URL (Optional)</Label>
                                     <Input
-                                        id="video"
+                                        id="videoUrl"
+                                        name="videoUrl"
                                         placeholder="https://..."
-                                        value={videoUrl}
-                                        onChange={e => setVideoUrl(e.target.value)}
                                     />
                                 </div>
-                                <Button type="submit" className="w-full">Create Card</Button>
+                                <Button type="submit" className="w-full" disabled={isLoading}>
+                                    {isLoading ? "Creating..." : "Create Card"}
+                                </Button>
                             </form>
                         )}
                     </div>

@@ -98,19 +98,28 @@ const MOCK_CARDS: CardType[] = [
     }
 ]
 
-export default function Home() {
-    const handleReview = (id: string, rating: number) => {
+import { getUser } from "@/app/actions/auth"
+import { submitReview } from "@/app/actions/cards"
+
+export default async function Home() {
+    const user = await getUser()
+
+    // Randomize cards for guests (or everyone for now until DB fetch is ready)
+    const shuffledCards = [...MOCK_CARDS].sort(() => Math.random() - 0.5)
+
+    const handleReview = async (id: string, rating: number) => {
+        "use server"
         console.log(`Reviewed card ${id} with rating ${rating}`)
-        // Call server action to update SM-2 progress
+        await submitReview(id, rating)
     }
 
     return (
         <main className="min-h-screen bg-black text-white relative">
             <FlashcardStack
-                initialCards={MOCK_CARDS}
+                initialCards={shuffledCards}
                 onReview={handleReview}
             />
-            <ProfileSettings />
+            <ProfileSettings user={user} />
         </main>
     )
 }
