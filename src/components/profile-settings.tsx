@@ -53,7 +53,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                     <div className="flex items-center gap-4 p-4 rounded-lg bg-zinc-900">
                         <Avatar className="h-16 w-16">
                             <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
-                            <AvatarFallback>{user?.user_metadata?.full_name?.[0] || "U"}</AvatarFallback>
+                            <AvatarFallback>{user?.user_metadata?.full_name?.[0] || user?.email?.[0]?.toUpperCase() || "G"}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                             <h3 className="font-medium text-lg">{user?.user_metadata?.full_name || "Guest"}</h3>
@@ -130,8 +130,26 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                     {/* Preferences */}
                     <div className="space-y-3">
                         <h4 className="text-sm font-medium text-zinc-500 uppercase tracking-wider">Preferences</h4>
-                        <div className="p-4 rounded-lg border border-zinc-800">
-                            Dark Mode: On
+                        <div className="p-4 rounded-lg border border-zinc-800 space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span>Dark Mode</span>
+                                <span className="text-zinc-500">On</span>
+                            </div>
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => {
+                                    // @ts-ignore
+                                    if (window.deferredPrompt) {
+                                        // @ts-ignore
+                                        window.deferredPrompt.prompt()
+                                    } else {
+                                        alert("To install, select 'Add to Home Screen' from your browser menu.")
+                                    }
+                                }}
+                            >
+                                Install App
+                            </Button>
                         </div>
                     </div>
                 </div>

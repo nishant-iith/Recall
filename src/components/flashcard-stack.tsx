@@ -27,10 +27,11 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
     const progress = ((currentIndex + (isFinished ? 1 : 0)) / cards.length) * 100
 
     const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        if (info.offset.x < -100 && info.velocity.x < -100) {
+        const threshold = 50 // Reduced from 100 for easier swipe
+        if (info.offset.x < -threshold && info.velocity.x < 0) {
             setExitX(-300)
             handleNext()
-        } else if (info.offset.x > 100 && info.velocity.x > 100) {
+        } else if (info.offset.x > threshold && info.velocity.x > 0) {
             setExitX(300)
             handlePrev()
         }
@@ -119,7 +120,7 @@ export function FlashcardStack({ initialCards, onReview }: FlashcardStackProps) 
                         key={currentCard.id}
                         drag="x"
                         dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={0.8}
+                        dragElastic={0.9}
                         onDragEnd={handleDragEnd}
                         className="w-full h-full max-h-[65vh] cursor-grab active:cursor-grabbing"
                         initial={{ scale: 0.9, opacity: 0, x: exitX > 0 ? -300 : 300 }}
