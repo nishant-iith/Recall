@@ -5,38 +5,68 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 const MODEL_NAMES = ["gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-1.5-pro", "gemini-pro"];
 
 async function getWorkingModel(apiKey: string) {
+    // 1. Try raw REST API to discover models (most robust)
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error("Gemini ListModels Failed:", response.status, errorBody);
+            // If 400/403, key is bad.
+            if (response.status === 400 || response.status === 403) {
+                throw new Error("Invalid API Key or API not enabled in Google Cloud Console.");
+            }
+        } else {
+            const data = await response.json();
+            const models = data.models || [];
+            // Find first model that supports generateContent
+            const viableModel = models.find((m: any) =>
+                m.supportedGenerationMethods?.includes("generateContent") &&
+                (m.name.includes("flash") || m.name.includes("pro")) // Prefer modern models
+            );
+
+            if (viableModel) {
+                console.log("Discovered viable model:", viableModel.name);
+                const genAI = new GoogleGenerativeAI(apiKey);
+                // model name comes as "models/gemini-pro", SDK expects just "gemini-pro" usually, 
+                // but SDK also handles "models/" prefix fine.
+                const modelName = viableModel.name.replace(/^models\//, "");
+                return genAI.getGenerativeModel({ model: modelName });
+            }
+        }
+    } catch (e) {
+        console.warn("Raw model list failed, falling back to hardcoded list:", e);
+    }
+
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Try models in order
+    // 2. Fallback: Try models in hardcoded order
     for (const modelName of MODEL_NAMES) {
         try {
             const model = genAI.getGenerativeModel({ model: modelName });
-            // Quick test to see if model exists/is accessible
-            // We use a token count request which is cheaper/faster than generation usually, 
-            // but generateContent is definitive.
             await model.generateContent("test");
             return model;
         } catch (error: any) {
-            // If 404, continue to next model. If 403 (Invalid Key), throw immediately.
-            if (error.toString().includes("404") || error.toString().includes("not found")) {
-                console.warn(`Model ${modelName} not found, trying next...`);
+            const errStr = error.toString();
+            if (errStr.includes("404") || errStr.includes("not found")) {
                 continue;
             }
-            throw error; // Re-throw auth errors or rate limits
+            throw error;
         }
     }
-    throw new Error("No compatible Gemini models found for this API key.");
+    throw new Error("No compatible Gemini models found for this API key. Ensure the 'Generative Language API' is enabled.");
 }
 
 export async function verifyApiKey(apiKey: string) {
     try {
-        await getWorkingModel(apiKey);
+        const model = await getWorkingModel(apiKey);
+        // Double check with a generate call
+        await model.generateContent("OK");
         return { success: true }
     } catch (error: any) {
-        console.error("Verification Error:", error)
+        console.error("Verification Error:", error);
         return {
             success: false,
-            error: error.message || "Invalid API Key or API not enabled."
+            error: error.message || "Failed to verify key."
         }
     }
 }
