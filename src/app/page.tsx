@@ -1,4 +1,4 @@
-"use client"
+
 
 import { FlashcardStack } from "@/components/flashcard-stack"
 import { ProfileSettings } from "@/components/profile-settings"
