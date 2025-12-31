@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -82,6 +82,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                 <div className="relative p-6 space-y-8">
                     <SheetHeader className="mb-2">
                         <SheetTitle className="text-2xl font-bold text-white tracking-tight">Settings</SheetTitle>
+                        <SheetDescription className="sr-only">Make changes to your profile and settings here.</SheetDescription>
                     </SheetHeader>
 
                     {/* User Profile Card */}

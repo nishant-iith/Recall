@@ -26,7 +26,7 @@ export function HeatmapStats() {
                     .from("user_streaks")
                     .select("current_streak")
                     .eq("user_id", user.id)
-                    .single()
+                    .maybeSingle()
 
                 if (data) {
                     setStreak(data.current_streak)
