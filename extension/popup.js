@@ -1,4 +1,4 @@
-const RECALL_URL = "http://localhost:3000";
+const RECALL_URL = "https://recall-alpha.vercel.app";
 
 document.addEventListener('DOMContentLoaded', async () => {
   const form = document.getElementById('card-form');

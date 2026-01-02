@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Sparkles, Share2, Volume2, ThumbsUp, ThumbsDown, X } from "lucide-react"
+import { Sparkles, Share2, Volume2, ThumbsUp, ThumbsDown, X, ChevronUp, ChevronDown } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 
 interface FlashcardReelProps {
@@ -359,7 +359,25 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
                             </ScrollArea>
 
                             {/* Side Action Bar */}
-                            <div className="absolute right-4 bottom-20 flex flex-col gap-6 items-center z-30 pointer-events-none">
+                            <div className="absolute right-4 bottom-20 flex flex-col gap-4 items-center z-30 pointer-events-none">
+                                {/* Navigation Controls */}
+                                <div className="flex flex-col gap-2 mb-4">
+                                    <Button
+                                        size="icon" variant="secondary" className="rounded-full bg-zinc-800/80 backdrop-blur pointer-events-auto hover:bg-zinc-700 h-10 w-10 border border-white/5"
+                                        onClick={(e) => { e.stopPropagation(); if (currentIndex > 0) handlePrev(); else toast("Start of deck") }}
+                                        disabled={currentIndex === 0}
+                                    >
+                                        <ChevronUp className="h-5 w-5" />
+                                    </Button>
+                                    <Button
+                                        size="icon" variant="secondary" className="rounded-full bg-zinc-800/80 backdrop-blur pointer-events-auto hover:bg-zinc-700 h-10 w-10 border border-white/5"
+                                        onClick={(e) => { e.stopPropagation(); if (currentIndex < cards.length - 1) handleNext(); else toast("End of deck") }}
+                                        disabled={currentIndex === cards.length - 1}
+                                    >
+                                        <ChevronDown className="h-5 w-5" />
+                                    </Button>
+                                </div>
+
                                 <Button
                                     size="icon" variant="ghost" className="rounded-full bg-zinc-800/50 backdrop-blur pointer-events-auto hover:bg-zinc-700"
                                     onClick={(e) => { e.stopPropagation(); toast.info("Reading aloud...") }}
@@ -368,7 +386,7 @@ export function FlashcardReel({ initialCards, onReview }: FlashcardReelProps) {
                                 </Button>
                                 <Button
                                     size="icon" variant="ghost" className="rounded-full bg-zinc-800/50 backdrop-blur pointer-events-auto hover:bg-zinc-700"
-                                    onClick={(e) => { e.stopPropagation(); setShowDeepDive(true) }} // Changed Share to Trigger Deep Dive explicitly on click too
+                                    onClick={(e) => { e.stopPropagation(); setShowDeepDive(true) }}
                                 >
                                     <Sparkles className="h-5 w-5 text-purple-400" />
                                 </Button>
